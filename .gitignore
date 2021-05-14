@@ -1,0 +1,11 @@
+.idea/
+.idea/workspace.xml
+capital*
+db/bolt.bin
+config.json
+wallet.dat
+config-debug.json
+log/20*
+UTC--*
+Log
+config.json
