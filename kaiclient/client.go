@@ -143,7 +143,7 @@ func (ec *Client) FullHeaderByNumber(ctx context.Context, number *big.Int) (*Kai
 		return nil, err
 	}
 
-	commit, err := ec.GetCommit(ctx, number)
+	commit, err := ec.GetCommit(ctx, number.Sub(number, big.NewInt(1)))
 	if err != nil {
 		return nil, err
 	}
