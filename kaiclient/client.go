@@ -373,9 +373,9 @@ func (ec *Client) CodeAt(ctx context.Context, account common.Address, blockNumbe
 // NonceAt returns the account nonce of the given account.
 // The block number can be nil, in which case the nonce is taken from the latest known block.
 func (ec *Client) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
-	var result hexutil.Uint64
+	var result uint64
 	err := ec.c.CallContext(ctx, &result, "tx_nonceAtHeight", account, toBlockNumArg(blockNumber))
-	return uint64(result), err
+	return result, err
 }
 
 // Filters
@@ -425,9 +425,10 @@ func toFilterArg(q ethereum.FilterQuery) (interface{}, error) {
 
 // PendingBalanceAt returns the wei balance of the given account in the pending state.
 func (ec *Client) PendingBalanceAt(ctx context.Context, account common.Address) (*big.Int, error) {
-	var result hexutil.Big
+	var result string
 	err := ec.c.CallContext(ctx, &result, "account_balance", account, "pending")
-	return (*big.Int)(&result), err
+	balanceStr, _ := new(big.Int).SetString(result, 10)
+	return balanceStr, err
 }
 
 // PendingStorageAt returns the value of key in the contract storage of the given account in the pending state.
@@ -447,9 +448,9 @@ func (ec *Client) PendingCodeAt(ctx context.Context, account common.Address) ([]
 // PendingNonceAt returns the account nonce of the given account in the pending state.
 // This is the nonce that should be used for the next transaction.
 func (ec *Client) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
-	var result hexutil.Uint64
+	var result uint64
 	err := ec.c.CallContext(ctx, &result, "account_nonceAtHeight", account, "pending")
-	return uint64(result), err
+	return result, err
 }
 
 // PendingTransactionCount returns the total number of transactions in the pending state.
