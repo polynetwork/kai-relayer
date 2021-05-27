@@ -22,8 +22,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/polynetwork/eth_relayer/config"
-	"github.com/polynetwork/eth_relayer/log"
+	"github.com/polynetwork/kai_relayer/config"
+	"github.com/polynetwork/kai_relayer/log"
 )
 
 type KaiKeyStore struct {

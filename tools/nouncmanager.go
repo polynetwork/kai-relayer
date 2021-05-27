@@ -23,8 +23,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/polynetwork/eth_relayer/kaiclient"
-	"github.com/polynetwork/eth_relayer/log"
+	"github.com/polynetwork/kai_relayer/kaiclient"
+	"github.com/polynetwork/kai_relayer/log"
 )
 
 const clear_nonce_interval = 10 * time.Minute

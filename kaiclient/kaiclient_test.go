@@ -32,12 +32,8 @@ func TestGetFullHeader(t *testing.T) {
 	ctx := context.Background()
 	header, err := cli.FullHeaderByNumber(ctx, big.NewInt(3))
 	assert.NoError(t, err)
-	header1, err := cli.FullHeaderByNumber(ctx, big.NewInt(4))
-	assert.NoError(t, err)
-	assert.Equal(t, header.Header.Hash().Hex(), header1.Header.LastBlockID.Hash.Hex())
-	assert.Equal(t, header.Commit.Hash().Hex(), header1.Header.LastCommitHash.Hex())
+	assert.Equal(t, header.Commit.Hash().Hex(), header.Header.LastCommitHash.Hex())
 	assert.Equal(t, header.ValidatorSet.Hash().Hex(), header.Header.ValidatorsHash.Hex())
-	assert.Equal(t, header1.ValidatorSet.Hash().Hex(), header.Header.NextValidatorsHash.Hex())
 }
 
 // // Verify that Client implements the ethereum interfaces.

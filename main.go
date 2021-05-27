@@ -23,12 +23,12 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/polynetwork/eth_relayer/cmd"
-	"github.com/polynetwork/eth_relayer/config"
-	"github.com/polynetwork/eth_relayer/db"
-	"github.com/polynetwork/eth_relayer/kaiclient"
-	"github.com/polynetwork/eth_relayer/log"
-	"github.com/polynetwork/eth_relayer/manager"
+	"github.com/polynetwork/kai_relayer/cmd"
+	"github.com/polynetwork/kai_relayer/config"
+	"github.com/polynetwork/kai_relayer/db"
+	"github.com/polynetwork/kai_relayer/kaiclient"
+	"github.com/polynetwork/kai_relayer/log"
+	"github.com/polynetwork/kai_relayer/manager"
 	sdk "github.com/polynetwork/poly-go-sdk"
 	"github.com/urfave/cli"
 )

@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/polynetwork/eth_relayer/log"
+	"github.com/polynetwork/kai_relayer/log"
 )
 
 const (

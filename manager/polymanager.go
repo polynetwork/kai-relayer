@@ -33,10 +33,10 @@ import (
 	"github.com/ontio/ontology-crypto/signature"
 	"github.com/polynetwork/eth-contracts/go_abi/eccd_abi"
 	"github.com/polynetwork/eth-contracts/go_abi/eccm_abi"
-	"github.com/polynetwork/eth_relayer/config"
-	"github.com/polynetwork/eth_relayer/db"
-	"github.com/polynetwork/eth_relayer/kaiclient"
-	"github.com/polynetwork/eth_relayer/log"
+	"github.com/polynetwork/kai_relayer/config"
+	"github.com/polynetwork/kai_relayer/db"
+	"github.com/polynetwork/kai_relayer/kaiclient"
+	"github.com/polynetwork/kai_relayer/log"
 	sdk "github.com/polynetwork/poly-go-sdk"
 	"github.com/polynetwork/poly/common"
 	"github.com/polynetwork/poly/common/password"
@@ -47,7 +47,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum"
-	"github.com/polynetwork/eth_relayer/tools"
+	"github.com/polynetwork/kai_relayer/tools"
 
 	polytypes "github.com/polynetwork/poly/core/types"
 )
