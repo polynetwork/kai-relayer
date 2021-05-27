@@ -11,7 +11,7 @@ Kai(Kardiachain) Relayer is an important character of Poly cross-chain interacti
 ### Build
 
 ```shell
-git clone https://github.com/polynetwork/kai_relayer.git
+git clone https://github.com/polynetwork/kai-relayer.git
 cd kai_relayer
 go build -o kai_relayer main.go
 ```

@@ -19,7 +19,7 @@ package cmd
 import (
 	"strings"
 
-	"github.com/polynetwork/kai_relayer/config"
+	"github.com/polynetwork/kai-relayer/config"
 	"github.com/urfave/cli"
 )
 

@@ -1,4 +1,4 @@
-module github.com/polynetwork/kai_relayer
+module github.com/polynetwork/kai-relayer
 
 go 1.14
 
