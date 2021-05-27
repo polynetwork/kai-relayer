@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -30,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/polynetwork/kai-relayer/log"
 
 	kai "github.com/kardiachain/go-kardia/mainchain"
 	ktypes "github.com/kardiachain/go-kardia/types"
@@ -540,4 +542,26 @@ func toCallArg(msg ethereum.CallMsg) interface{} {
 		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
 	}
 	return arg
+}
+
+func (ec *Client) WaitTransactionConfirm(hash common.Hash) {
+	start := time.Now()
+	for {
+		time.Sleep(time.Millisecond * 100)
+		if time.Now().After(start.Add(time.Second * 10)) {
+			log.Errorf("WaitTransactionConfirm max wait time exceeded, quit")
+			return
+		}
+		_, ispending, err := ec.TransactionByHash(context.Background(), hash)
+		if err != nil {
+			log.Errorf("failed to call TransactionByHash: %v hash:%s", err, hash.String())
+			continue
+		}
+		if ispending == true {
+			continue
+		} else {
+			break
+		}
+	}
+
 }
