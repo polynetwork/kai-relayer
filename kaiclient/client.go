@@ -547,8 +547,8 @@ func toCallArg(msg ethereum.CallMsg) interface{} {
 func (ec *Client) WaitTransactionConfirm(hash common.Hash) {
 	start := time.Now()
 	for {
-		time.Sleep(time.Millisecond * 100)
-		if time.Now().After(start.Add(time.Second * 10)) {
+		time.Sleep(time.Millisecond * 300)
+		if time.Now().After(start.Add(time.Second * 20)) {
 			log.Errorf("WaitTransactionConfirm max wait time exceeded, quit")
 			return
 		}
