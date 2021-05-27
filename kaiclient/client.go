@@ -544,6 +544,13 @@ func toCallArg(msg ethereum.CallMsg) interface{} {
 	return arg
 }
 
+// TransactionCount returns the total number of transactions in the given block.
+func (ec *Client) BlockNumber(ctx context.Context) (uint, error) {
+	var num uint64
+	err := ec.c.CallContext(ctx, &num, "kai_blockNumber")
+	return uint(num), err
+}
+
 func (ec *Client) WaitTransactionConfirm(hash common.Hash) {
 	start := time.Now()
 	for {
