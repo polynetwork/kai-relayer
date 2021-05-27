@@ -568,12 +568,12 @@ func (ec *Client) WaitTransactionConfirm(hash common.Hash) {
 			log.Errorf("WaitTransactionConfirm max wait time exceeded, quit")
 			return
 		}
-		_, ispending, err := ec.TransactionByHash(context.Background(), hash)
+		receipt, err := ec.TransactionReceipt(context.Background(), hash)
 		if err != nil {
 			log.Errorf("failed to call TransactionByHash: %v hash:%s", err, hash.String())
 			continue
 		}
-		if ispending == true {
+		if receipt == nil {
 			continue
 		} else {
 			break
