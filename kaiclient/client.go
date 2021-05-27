@@ -349,9 +349,10 @@ func (ec *Client) NetworkID(ctx context.Context) (*big.Int, error) {
 // BalanceAt returns the wei balance of the given account.
 // The block number can be nil, in which case the balance is taken from the latest known block.
 func (ec *Client) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
-	var result hexutil.Big
+	var result string
 	err := ec.c.CallContext(ctx, &result, "account_balance", account, toBlockNumArg(blockNumber))
-	return (*big.Int)(&result), err
+	balance, _ := new(big.Int).SetString(result, 10)
+	return balance, err
 }
 
 // StorageAt returns the value of key in the contract storage of the given account.
@@ -493,11 +494,12 @@ func (ec *Client) PendingCallContract(ctx context.Context, msg ethereum.CallMsg)
 // SuggestGasPrice retrieves the currently suggested gas price to allow a timely
 // execution of a transaction.
 func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	var hex hexutil.Big
-	if err := ec.c.CallContext(ctx, &hex, "kai_gasPrice"); err != nil {
+	var result string
+	if err := ec.c.CallContext(ctx, &result, "kai_gasPrice"); err != nil {
 		return nil, err
 	}
-	return (*big.Int)(&hex), nil
+	gp, _ := new(big.Int).SetString(result, 10)
+	return gp, nil
 }
 
 // EstimateGas tries to estimate the gas needed to execute a specific transaction based on
@@ -505,12 +507,12 @@ func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 // the true gas limit requirement as other transactions may be added or removed by miners,
 // but it should provide a basis for setting a reasonable default.
 func (ec *Client) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64, error) {
-	var hex hexutil.Uint64
-	err := ec.c.CallContext(ctx, &hex, "kai_estimateGas", toCallArg(msg))
+	var result uint64
+	err := ec.c.CallContext(ctx, &result, "kai_estimateGas", toCallArg(msg))
 	if err != nil {
 		return 0, err
 	}
-	return uint64(hex), nil
+	return result, nil
 }
 
 // SendTransaction injects a signed transaction into the pending pool for execution.
