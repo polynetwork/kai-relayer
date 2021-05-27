@@ -183,17 +183,6 @@ func (ec *Client) GetProof(ctx context.Context, address common.Address, storageK
 	return accountR, err
 }
 
-type rpcTransaction struct {
-	tx *types.Transaction
-	txExtraInfo
-}
-
-type txExtraInfo struct {
-	BlockNumber uint64          `json:"blockNumber,omitempty"`
-	BlockHash   *common.Hash    `json:"blockHash,omitempty"`
-	From        *common.Address `json:"from,omitempty"`
-}
-
 func (tx *rpcTransaction) UnmarshalJSON(msg []byte) error {
 	if err := json.Unmarshal(msg, &tx.tx); err != nil {
 		return err
@@ -202,20 +191,33 @@ func (tx *rpcTransaction) UnmarshalJSON(msg []byte) error {
 }
 
 // TransactionByHash returns the transaction with the given hash.
-func (ec *Client) TransactionByHash(ctx context.Context, hash common.Hash) (tx *types.Transaction, isPending bool, err error) {
-	var txJson *rpcTransaction
-	err = ec.c.CallContext(ctx, &txJson, "tx_getTransaction", hash)
+func (ec *Client) TransactionByHash(ctx context.Context, hash common.Hash) (*types.Transaction, bool, error) {
+	var (
+		txJson *kai.PublicTransaction
+		tx     *rpcTransaction
+	)
+	err := ec.c.CallContext(ctx, &txJson, "tx_getTransaction", hash)
 	if err != nil {
 		return nil, false, err
 	} else if txJson == nil {
 		return nil, false, ethereum.NotFound
-	} else if _, r, _ := txJson.tx.RawSignatureValues(); r == nil {
+	}
+	rpcTx := toEthRPCTransaction(txJson)
+	txBytes, err := json.Marshal(rpcTx)
+	if err != nil {
+		return nil, false, err
+	}
+	err = json.Unmarshal(txBytes, &tx)
+	if err != nil {
+		return nil, false, err
+	}
+	if _, r, _ := tx.tx.RawSignatureValues(); r == nil {
 		return nil, false, fmt.Errorf("server returned transaction without signature")
 	}
-	if txJson.From != nil && txJson.BlockHash != nil {
-		setSenderFromServer(txJson.tx, *txJson.From, *txJson.BlockHash)
+	if tx.From != nil && tx.BlockHash != nil {
+		setSenderFromServer(tx.tx, *tx.From, *tx.BlockHash)
 	}
-	return txJson.tx, txJson.BlockNumber == 0, nil
+	return tx.tx, tx.BlockNumber == nil, nil
 }
 
 // TransactionSender returns the sender address of the given transaction. The transaction
@@ -251,34 +253,38 @@ func (ec *Client) TransactionCount(ctx context.Context, blockHash common.Hash) (
 }
 
 // TransactionInBlock returns a single transaction at index in the given block.
-func (ec *Client) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
-	var json *rpcTransaction
-	err := ec.c.CallContext(ctx, &json, "kai_getTransactionByBlockHashAndIndex", blockHash, hexutil.Uint64(index))
-	if err != nil {
-		return nil, err
-	}
-	if json == nil {
-		return nil, ethereum.NotFound
-	} else if _, r, _ := json.tx.RawSignatureValues(); r == nil {
-		return nil, fmt.Errorf("server returned transaction without signature")
-	}
-	if json.From != nil && json.BlockHash != nil {
-		setSenderFromServer(json.tx, *json.From, *json.BlockHash)
-	}
-	return json.tx, err
-}
+//func (ec *Client) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
+//	var json *rpcTransaction
+//	err := ec.c.CallContext(ctx, &json, "kai_getTransactionByBlockHashAndIndex", blockHash, hexutil.Uint64(index))
+//	if err != nil {
+//		return nil, err
+//	}
+//	if json == nil {
+//		return nil, ethereum.NotFound
+//	} else if _, r, _ := json.tx.RawSignatureValues(); r == nil {
+//		return nil, fmt.Errorf("server returned transaction without signature")
+//	}
+//	if json.From != nil && json.BlockHash != nil {
+//		setSenderFromServer(json.tx, *json.From, *json.BlockHash)
+//	}
+//	return json.tx, err
+//}
 
 // TransactionReceipt returns the receipt of a transaction by transaction hash.
 // Note that the receipt is not available for pending transactions.
 func (ec *Client) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	var r *kai.PublicReceipt
-	err := ec.c.CallContext(ctx, &r, "kai_getTransactionReceipt", txHash)
+	var (
+		r       *kai.PublicReceipt
+		receipt *types.Receipt
+	)
+	err := ec.c.CallContext(ctx, &r, "tx_getTransactionReceipt", txHash)
 	if err == nil {
 		if r == nil {
 			return nil, ethereum.NotFound
 		}
+		receipt = ec.toEthReceipt(r)
 	}
-	return ec.toEthReceipt(r), err
+	return receipt, err
 }
 
 func toBlockNumArg(number *big.Int) string {
