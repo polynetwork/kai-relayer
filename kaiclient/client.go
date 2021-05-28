@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"time"
 
@@ -291,7 +292,7 @@ func toBlockNumArg(number *big.Int) string {
 	if number == nil {
 		return "latest"
 	}
-	pending := big.NewInt(-1)
+	pending := new(big.Int).SetUint64(math.MaxUint64 - 1)
 	if number.Cmp(pending) == 0 {
 		return "pending"
 	}
@@ -541,6 +542,7 @@ func toCallArg(msg ethereum.CallMsg) interface{} {
 	if len(msg.Data) > 0 {
 		arg["data"] = hexutil.Bytes(msg.Data)
 	}
+	// add default params to avoid kai_kardiaCall crashing
 	if msg.Value != nil {
 		arg["value"] = msg.Value.String()
 	} else {
@@ -559,13 +561,15 @@ func toCallArg(msg ethereum.CallMsg) interface{} {
 	return arg
 }
 
-// TransactionCount returns the total number of transactions in the given block.
-func (ec *Client) BlockNumber(ctx context.Context) (uint, error) {
+// BlockNumber returns the latest block height of network.
+func (ec *Client) BlockNumber(ctx context.Context) (uint64, error) {
 	var num uint64
 	err := ec.c.CallContext(ctx, &num, "kai_blockNumber")
-	return uint(num), err
+	return num, err
 }
 
+// WaitTransactionConfirm wait for the transaction receipts to confirm if
+// this transaction hash is executed or not
 func (ec *Client) WaitTransactionConfirm(hash common.Hash) {
 	start := time.Now()
 	for {
@@ -585,5 +589,4 @@ func (ec *Client) WaitTransactionConfirm(hash common.Hash) {
 			break
 		}
 	}
-
 }

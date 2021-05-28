@@ -35,7 +35,7 @@ const (
 	KAI_USEFUL_BLOCK_NUM     = 3
 	KAI_PROOF_USERFUL_BLOCK  = 12
 	ONT_USEFUL_BLOCK_NUM     = 1
-	KAI_CHAIN_ID             = 0
+	KAI_CHAIN_ID             = 12
 	DEFAULT_CONFIG_FILE_NAME = "./config.json"
 	Version                  = "1.0"
 
