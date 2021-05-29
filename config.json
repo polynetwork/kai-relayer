@@ -6,13 +6,13 @@
     "WalletPwd":"123456789"
   },
   "KaiConfig":{
-    "SideChainId": 12,
+    "SideChainId": 138,
     "RestURL":"https://dev-1.kardiachain.io",
     "ECCMContractAddress":"0xfD7fa60cc69A1787Cd4255E3a9397464844aeB7B",
     "ECCDContractAddress":"0xf7616021e91Ad107e5149DD1E5E41148B4d25bda",
     "KeyStorePath": "./keystore",
     "KeyStorePwdSet": {
-      "0x2290ddc3874523ffd48c948c8b9379425bDe8BeC": "password"
+      "0x2290ddc3874523ffd48c948c8b9379425bDe8BeC": "123456"
     },
     "BlockConfig": 20,
     "HeadersPerBatch": 500,

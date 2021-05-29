@@ -41,6 +41,7 @@ import (
 	"github.com/polynetwork/poly/common"
 	"github.com/polynetwork/poly/native/service/cross_chain_manager/eth"
 	scom "github.com/polynetwork/poly/native/service/header_sync/common"
+	"github.com/polynetwork/poly/native/service/utils"
 	autils "github.com/polynetwork/poly/native/service/utils"
 )
 
@@ -232,17 +233,14 @@ func (this *KardiaManager) init() error {
 
 func (this *KardiaManager) findLastestHeight() uint64 {
 	// try to get key
-	var sideChainId uint64 = config.KAI_CHAIN_ID
-	var sideChainIdBytes [8]byte
-	binary.LittleEndian.PutUint64(sideChainIdBytes[:], sideChainId)
 	contractAddress := autils.HeaderSyncContractAddress
-	key := append([]byte(scom.CURRENT_HEADER_HEIGHT), sideChainIdBytes[:]...)
+	key := append([]byte(scom.EPOCH_SWITCH), utils.GetUint64Bytes(this.config.KAIConfig.SideChainId)...)
 	// try to get storage
 	result, err := this.polySdk.GetStorage(contractAddress.ToHexString(), key)
 	if err != nil {
 		return 0
 	}
-	if result == nil || len(result) == 0 {
+	if len(result) == 0 {
 		return 0
 	} else {
 		return binary.LittleEndian.Uint64(result)
@@ -325,7 +323,7 @@ func (this *KardiaManager) fetchLockDepositEvents(height uint64, client *kaiclie
 
 func (this *KardiaManager) commitHeader() int {
 	tx, err := this.polySdk.Native.Hs.SyncBlockHeader(
-		uint64(config.KAI_CHAIN_ID),
+		this.config.KAIConfig.SideChainId,
 		this.polySigner.Address,
 		this.header4sync,
 		this.polySigner,
@@ -433,7 +431,7 @@ func (this *KardiaManager) handleLockDepositEvents(refHeight uint64) error {
 func (this *KardiaManager) commitProof(height uint32, proof []byte, value []byte, txhash []byte) (string, error) {
 	log.Infof("commit proof, height: %d, proof: %s, value: %s, txhash: %s", height, string(proof), hex.EncodeToString(value), hex.EncodeToString(txhash))
 	tx, err := this.polySdk.Native.Ccm.ImportOuterTransfer(
-		uint64(config.KAI_CHAIN_ID),
+		this.config.KAIConfig.SideChainId,
 		value,
 		height,
 		proof,
