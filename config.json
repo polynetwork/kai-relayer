@@ -3,7 +3,7 @@
     "RestURL":"http://138.91.6.226:40336",
     "EntranceContractAddress":"0300000000000000000000000000000000000000",
     "WalletFile":"/home/thangn/go/pkg/github.com/polynetwork/poly/wallet.dat",
-    "WalletPwd":"123456789"
+    "WalletPwd":"123456"
   },
   "KaiConfig":{
     "SideChainId": 138,

@@ -108,6 +108,7 @@ type KardiaManager struct {
 func NewKardiaManager(servconfig *config.ServiceConfig, startheight uint64, startforceheight uint64, ontsdk *sdk.PolySdk, client *kaiclient.Client, boltDB *db.BoltDB) (*KardiaManager, error) {
 	var wallet *sdk.Wallet
 	var err error
+
 	if !common.FileExisted(servconfig.PolyConfig.WalletFile) {
 		wallet, err = ontsdk.CreateWallet(servconfig.PolyConfig.WalletFile)
 		if err != nil {
@@ -175,12 +176,12 @@ func (this *KardiaManager) MonitorChain() {
 			blockHandleResult = true
 			for this.currentHeight < height-config.KAI_USEFUL_BLOCK_NUM {
 				blockHandleResult = this.handleNewBlock(this.currentHeight + 1)
-				if blockHandleResult == false {
+				if !blockHandleResult {
 					break
 				}
 				this.currentHeight++
 				// try to commit header if more than 50 headers needed to be syned
-				if len(this.header4sync) >= 50 {
+				if len(this.header4sync) > 0 {
 					if this.commitHeader() != 0 {
 						log.Errorf("MonitorChain - commit header failed.")
 						blockHandleResult = false
@@ -189,7 +190,7 @@ func (this *KardiaManager) MonitorChain() {
 					this.header4sync = make([][]byte, 0)
 				}
 			}
-			if blockHandleResult == false {
+			if !blockHandleResult {
 				continue
 			}
 			// try to commit lastest header when we are at latest height
@@ -228,6 +229,7 @@ func (this *KardiaManager) init() error {
 	} else {
 		this.currentHeight = latestHeight
 	}
+	this.currentHeight = 584800
 	return nil
 }
 
@@ -240,6 +242,13 @@ func (this *KardiaManager) findLastestHeight() uint64 {
 	if err != nil {
 		return 0
 	}
+
+	sink := common.NewZeroCopySource(result)
+	sink.NextUint64()
+	//sink.NextVarBytes()
+	val, _ := sink.NextVarBytes()
+	fmt.Println(ethcommon.BytesToHash(val).Hex())
+
 	if len(result) == 0 {
 		return 0
 	} else {
@@ -262,14 +271,36 @@ func (this *KardiaManager) handleNewBlock(height uint64) bool {
 
 func (this *KardiaManager) handleBlockHeader(height uint64) bool {
 	ctx := context.Background()
-
-	header, err := this.client.FullHeaderByNumber(ctx, big.NewInt(int64(height)))
+	number := big.NewInt(int64(height))
+	header, err := this.client.HeaderByNumber(ctx, number)
 	if err != nil {
-		log.Errorf("handleBlockHeader - GetNodeHeader on height :%d failed", height)
+		log.Error("handleBlockHeader - GetNodeHeader on height :%d failed", height, "err", err)
 		return false
 	}
 
-	headerBytes, err := json.Marshal(header)
+	if header.ValidatorsHash.Equal(header.NextValidatorsHash) {
+		return true
+	}
+
+	validators, err := this.client.GetValidators(ctx, number)
+	if err != nil {
+		log.Error("handleBlockHeader - GetValidators on height :%d failed", height, "err", err)
+		return false
+	}
+
+	commit, err := this.client.GetCommit(ctx, number.Sub(number, big.NewInt(1)))
+	if err != nil {
+		log.Error("handleBlockHeader - GetCommit on height :%d failed", height, "err", err)
+		return false
+	}
+
+	fullHeader := &kaiclient.KaiHeader{
+		Header:       header,
+		ValidatorSet: validators,
+		Commit:       commit,
+	}
+
+	headerBytes, err := json.Marshal(fullHeader)
 	if err != nil {
 		log.Errorf("marshal header on height :%d failed err %s", height, err)
 		return false
