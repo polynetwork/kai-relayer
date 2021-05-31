@@ -116,7 +116,7 @@ func NewKardiaManager(servconfig *config.ServiceConfig, startheight uint64, star
 	} else {
 		wallet, err = ontsdk.OpenWallet(servconfig.PolyConfig.WalletFile)
 		if err != nil {
-			log.Errorf("NewETHManager - wallet open error: %s", err.Error())
+			log.Errorf("NewKaiManager - wallet open error: %s", err.Error())
 			return nil, err
 		}
 	}
@@ -124,7 +124,7 @@ func NewKardiaManager(servconfig *config.ServiceConfig, startheight uint64, star
 	if err != nil || signer == nil {
 		signer, err = wallet.NewDefaultSettingAccount([]byte(servconfig.PolyConfig.WalletPwd))
 		if err != nil {
-			log.Errorf("NewETHManager - wallet password error")
+			log.Errorf("NewKaiManager - wallet password error")
 			return nil, err
 		}
 
@@ -133,7 +133,7 @@ func NewKardiaManager(servconfig *config.ServiceConfig, startheight uint64, star
 			return nil, err
 		}
 	}
-	log.Infof("NewETHManager - poly address: %s", signer.Address.ToBase58())
+	log.Infof("NewKaiManager - poly address: %s", signer.Address.ToBase58())
 
 	mgr := &KardiaManager{
 		config:        servconfig,
@@ -171,7 +171,7 @@ func (this *KardiaManager) MonitorChain() {
 			if height-this.currentHeight <= config.KAI_USEFUL_BLOCK_NUM {
 				continue
 			}
-			log.Infof("MonitorChain - eth height is %d", height)
+			log.Infof("MonitorChain - kai height is %d", height)
 			blockHandleResult = true
 			for this.currentHeight < height-config.KAI_USEFUL_BLOCK_NUM {
 				blockHandleResult = this.handleNewBlock(this.currentHeight + 1)
@@ -362,7 +362,9 @@ func (this *KardiaManager) MonitorDeposit() {
 			snycheight := this.findLastestHeight()
 			if snycheight > height-config.KAI_PROOF_USERFUL_BLOCK {
 				// try to handle deposit event when we are at latest height
-				this.handleLockDepositEvents(snycheight)
+				if err := this.handleLockDepositEvents(snycheight); err != nil {
+					log.Errorf("MonitorChain - handleLockDepositEvents, err: %s", err)
+				}
 			}
 		case <-this.exitChan:
 			return
@@ -445,21 +447,14 @@ func (this *KardiaManager) commitProof(height uint32, proof []byte, value []byte
 		return tx.ToHexString(), nil
 	}
 }
-func (this *KardiaManager) parserValue(value []byte) []byte {
-	source := common.NewZeroCopySource(value)
-	txHash, eof := source.NextVarBytes()
-	if eof {
-		fmt.Printf("parserValue - deserialize txHash error")
-	}
-	return txHash
-}
+
 func (this *KardiaManager) CheckDeposit() {
 	checkTicker := time.NewTicker(config.KAI_MONITOR_INTERVAL)
 	for {
 		select {
 		case <-checkTicker.C:
 			// try to check deposit
-			this.checkLockDepositEvents()
+			_ = this.checkLockDepositEvents()
 		case <-this.exitChan:
 			return
 		}
