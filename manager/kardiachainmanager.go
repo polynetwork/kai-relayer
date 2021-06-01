@@ -183,7 +183,7 @@ func (this *KardiaManager) MonitorChain() {
 				// try to commit header if more than 50 headers needed to be syned
 				if len(this.header4sync) > 0 {
 					if this.commitHeader() != 0 {
-						log.Errorf("MonitorChain - commit header failed.")
+						log.Error("MonitorChain - commit header failed.", "height", this.currentHeight)
 						blockHandleResult = false
 						break
 					}
@@ -196,7 +196,7 @@ func (this *KardiaManager) MonitorChain() {
 			// try to commit lastest header when we are at latest height
 			commitHeaderResult := this.commitHeader()
 			if commitHeaderResult > 0 {
-				log.Errorf("MonitorChain - commit header failed.")
+				log.Error("MonitorChain - commit header failed.", "height", this.currentHeight)
 				continue
 			} else if commitHeaderResult == 0 {
 				backtrace = 1
@@ -229,7 +229,6 @@ func (this *KardiaManager) init() error {
 	} else {
 		this.currentHeight = latestHeight
 	}
-	this.currentHeight = 584800
 	return nil
 }
 
@@ -242,12 +241,6 @@ func (this *KardiaManager) findLastestHeight() uint64 {
 	if err != nil {
 		return 0
 	}
-
-	sink := common.NewZeroCopySource(result)
-	sink.NextUint64()
-	//sink.NextVarBytes()
-	val, _ := sink.NextVarBytes()
-	fmt.Println(ethcommon.BytesToHash(val).Hex())
 
 	if len(result) == 0 {
 		return 0
@@ -282,6 +275,14 @@ func (this *KardiaManager) handleBlockHeader(height uint64) bool {
 		return true
 	}
 
+	val, _ := this.polySdk.GetStorage(utils.CrossChainManagerContractAddress.ToHexString(),
+		append(append([]byte(scom.EPOCH_SWITCH), utils.GetUint64Bytes(this.config.KAIConfig.SideChainId)...),
+			utils.GetUint64Bytes(uint64(header.Height))...))
+	// check if this header is not committed on Poly
+	if len(val) > 0 {
+		return true
+	}
+
 	validators, err := this.client.GetValidators(ctx, number)
 	if err != nil {
 		log.Error("handleBlockHeader - GetValidators on height :%d failed", height, "err", err)
@@ -299,7 +300,6 @@ func (this *KardiaManager) handleBlockHeader(height uint64) bool {
 		ValidatorSet: validators,
 		Commit:       commit,
 	}
-
 	headerBytes, err := json.Marshal(fullHeader)
 	if err != nil {
 		log.Errorf("marshal header on height :%d failed err %s", height, err)

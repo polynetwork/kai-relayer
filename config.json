@@ -6,7 +6,7 @@
     "WalletPwd":"123456"
   },
   "KaiConfig":{
-    "SideChainId": 138,
+    "SideChainId": 141,
     "RestURL":"https://dev-1.kardiachain.io",
     "ECCMContractAddress":"0xfD7fa60cc69A1787Cd4255E3a9397464844aeB7B",
     "ECCDContractAddress":"0xf7616021e91Ad107e5149DD1E5E41148B4d25bda",
