@@ -515,7 +515,7 @@ func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 // but it should provide a basis for setting a reasonable default.
 func (ec *Client) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64, error) {
 	var result uint64
-	err := ec.c.CallContext(ctx, &result, "kai_estimateGas", toCallArg(msg))
+	err := ec.c.CallContext(ctx, &result, "kai_estimateGas", toCallArg(msg), "latest")
 	if err != nil {
 		return 0, err
 	}
