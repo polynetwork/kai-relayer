@@ -35,7 +35,6 @@ const (
 	KAI_USEFUL_BLOCK_NUM     = 3
 	KAI_PROOF_USERFUL_BLOCK  = 12
 	ONT_USEFUL_BLOCK_NUM     = 1
-	KAI_CHAIN_ID             = 12
 	DEFAULT_CONFIG_FILE_NAME = "./config.json"
 	Version                  = "1.0"
 
@@ -71,6 +70,7 @@ type KAIConfig struct {
 	KeyStorePath        string
 	KeyStorePwdSet      map[string]string
 	BlockConfig         uint64
+	SideChainId         uint64
 }
 
 func ReadFile(fileName string) ([]byte, error) {

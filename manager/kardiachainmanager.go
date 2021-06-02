@@ -41,6 +41,7 @@ import (
 	"github.com/polynetwork/poly/common"
 	"github.com/polynetwork/poly/native/service/cross_chain_manager/eth"
 	scom "github.com/polynetwork/poly/native/service/header_sync/common"
+	"github.com/polynetwork/poly/native/service/utils"
 	autils "github.com/polynetwork/poly/native/service/utils"
 )
 
@@ -107,6 +108,7 @@ type KardiaManager struct {
 func NewKardiaManager(servconfig *config.ServiceConfig, startheight uint64, startforceheight uint64, ontsdk *sdk.PolySdk, client *kaiclient.Client, boltDB *db.BoltDB) (*KardiaManager, error) {
 	var wallet *sdk.Wallet
 	var err error
+
 	if !common.FileExisted(servconfig.PolyConfig.WalletFile) {
 		wallet, err = ontsdk.CreateWallet(servconfig.PolyConfig.WalletFile)
 		if err != nil {
@@ -115,7 +117,7 @@ func NewKardiaManager(servconfig *config.ServiceConfig, startheight uint64, star
 	} else {
 		wallet, err = ontsdk.OpenWallet(servconfig.PolyConfig.WalletFile)
 		if err != nil {
-			log.Errorf("NewETHManager - wallet open error: %s", err.Error())
+			log.Errorf("NewKaiManager - wallet open error: %s", err.Error())
 			return nil, err
 		}
 	}
@@ -123,7 +125,7 @@ func NewKardiaManager(servconfig *config.ServiceConfig, startheight uint64, star
 	if err != nil || signer == nil {
 		signer, err = wallet.NewDefaultSettingAccount([]byte(servconfig.PolyConfig.WalletPwd))
 		if err != nil {
-			log.Errorf("NewETHManager - wallet password error")
+			log.Errorf("NewKaiManager - wallet password error")
 			return nil, err
 		}
 
@@ -132,7 +134,7 @@ func NewKardiaManager(servconfig *config.ServiceConfig, startheight uint64, star
 			return nil, err
 		}
 	}
-	log.Infof("NewETHManager - poly address: %s", signer.Address.ToBase58())
+	log.Infof("NewKaiManager - poly address: %s", signer.Address.ToBase58())
 
 	mgr := &KardiaManager{
 		config:        servconfig,
@@ -170,31 +172,31 @@ func (this *KardiaManager) MonitorChain() {
 			if height-this.currentHeight <= config.KAI_USEFUL_BLOCK_NUM {
 				continue
 			}
-			log.Infof("MonitorChain - eth height is %d", height)
+			log.Infof("MonitorChain - kai height is %d", height)
 			blockHandleResult = true
 			for this.currentHeight < height-config.KAI_USEFUL_BLOCK_NUM {
 				blockHandleResult = this.handleNewBlock(this.currentHeight + 1)
-				if blockHandleResult == false {
+				if !blockHandleResult {
 					break
 				}
 				this.currentHeight++
 				// try to commit header if more than 50 headers needed to be syned
-				if len(this.header4sync) >= 50 {
+				if len(this.header4sync) > 0 {
 					if this.commitHeader() != 0 {
-						log.Errorf("MonitorChain - commit header failed.")
+						log.Error("MonitorChain - commit header failed.", "height", this.currentHeight)
 						blockHandleResult = false
 						break
 					}
 					this.header4sync = make([][]byte, 0)
 				}
 			}
-			if blockHandleResult == false {
+			if !blockHandleResult {
 				continue
 			}
 			// try to commit lastest header when we are at latest height
 			commitHeaderResult := this.commitHeader()
 			if commitHeaderResult > 0 {
-				log.Errorf("MonitorChain - commit header failed.")
+				log.Error("MonitorChain - commit header failed.", "height", this.currentHeight)
 				continue
 			} else if commitHeaderResult == 0 {
 				backtrace = 1
@@ -232,17 +234,15 @@ func (this *KardiaManager) init() error {
 
 func (this *KardiaManager) findLastestHeight() uint64 {
 	// try to get key
-	var sideChainId uint64 = config.KAI_CHAIN_ID
-	var sideChainIdBytes [8]byte
-	binary.LittleEndian.PutUint64(sideChainIdBytes[:], sideChainId)
 	contractAddress := autils.HeaderSyncContractAddress
-	key := append([]byte(scom.CURRENT_HEADER_HEIGHT), sideChainIdBytes[:]...)
+	key := append([]byte(scom.EPOCH_SWITCH), utils.GetUint64Bytes(this.config.KAIConfig.SideChainId)...)
 	// try to get storage
 	result, err := this.polySdk.GetStorage(contractAddress.ToHexString(), key)
 	if err != nil {
 		return 0
 	}
-	if result == nil || len(result) == 0 {
+
+	if len(result) == 0 {
 		return 0
 	} else {
 		return binary.LittleEndian.Uint64(result)
@@ -264,14 +264,43 @@ func (this *KardiaManager) handleNewBlock(height uint64) bool {
 
 func (this *KardiaManager) handleBlockHeader(height uint64) bool {
 	ctx := context.Background()
-
-	header, err := this.client.FullHeaderByNumber(ctx, big.NewInt(int64(height)))
+	number := big.NewInt(int64(height))
+	header, err := this.client.HeaderByNumber(ctx, number)
 	if err != nil {
-		log.Errorf("handleBlockHeader - GetNodeHeader on height :%d failed", height)
+		log.Error("handleBlockHeader - GetNodeHeader on height :%d failed", height, "err", err)
 		return false
 	}
 
-	headerBytes, err := json.Marshal(header)
+	if header.ValidatorsHash.Equal(header.NextValidatorsHash) {
+		return true
+	}
+
+	val, _ := this.polySdk.GetStorage(utils.CrossChainManagerContractAddress.ToHexString(),
+		append(append([]byte(scom.EPOCH_SWITCH), utils.GetUint64Bytes(this.config.KAIConfig.SideChainId)...),
+			utils.GetUint64Bytes(uint64(header.Height))...))
+	// check if this header is not committed on Poly
+	if len(val) > 0 {
+		return true
+	}
+
+	validators, err := this.client.GetValidators(ctx, number)
+	if err != nil {
+		log.Error("handleBlockHeader - GetValidators on height :%d failed", height, "err", err)
+		return false
+	}
+
+	commit, err := this.client.GetCommit(ctx, number.Sub(number, big.NewInt(1)))
+	if err != nil {
+		log.Error("handleBlockHeader - GetCommit on height :%d failed", height, "err", err)
+		return false
+	}
+
+	fullHeader := &kaiclient.KaiHeader{
+		Header:       header,
+		ValidatorSet: validators,
+		Commit:       commit,
+	}
+	headerBytes, err := json.Marshal(fullHeader)
 	if err != nil {
 		log.Errorf("marshal header on height :%d failed err %s", height, err)
 		return false
@@ -325,7 +354,7 @@ func (this *KardiaManager) fetchLockDepositEvents(height uint64, client *kaiclie
 
 func (this *KardiaManager) commitHeader() int {
 	tx, err := this.polySdk.Native.Hs.SyncBlockHeader(
-		uint64(config.KAI_CHAIN_ID),
+		this.config.KAIConfig.SideChainId,
 		this.polySigner.Address,
 		this.header4sync,
 		this.polySigner,
@@ -364,7 +393,9 @@ func (this *KardiaManager) MonitorDeposit() {
 			snycheight := this.findLastestHeight()
 			if snycheight > height-config.KAI_PROOF_USERFUL_BLOCK {
 				// try to handle deposit event when we are at latest height
-				this.handleLockDepositEvents(snycheight)
+				if err := this.handleLockDepositEvents(snycheight); err != nil {
+					log.Errorf("MonitorChain - handleLockDepositEvents, err: %s", err)
+				}
 			}
 		case <-this.exitChan:
 			return
@@ -433,7 +464,7 @@ func (this *KardiaManager) handleLockDepositEvents(refHeight uint64) error {
 func (this *KardiaManager) commitProof(height uint32, proof []byte, value []byte, txhash []byte) (string, error) {
 	log.Infof("commit proof, height: %d, proof: %s, value: %s, txhash: %s", height, string(proof), hex.EncodeToString(value), hex.EncodeToString(txhash))
 	tx, err := this.polySdk.Native.Ccm.ImportOuterTransfer(
-		uint64(config.KAI_CHAIN_ID),
+		this.config.KAIConfig.SideChainId,
 		value,
 		height,
 		proof,
@@ -447,21 +478,14 @@ func (this *KardiaManager) commitProof(height uint32, proof []byte, value []byte
 		return tx.ToHexString(), nil
 	}
 }
-func (this *KardiaManager) parserValue(value []byte) []byte {
-	source := common.NewZeroCopySource(value)
-	txHash, eof := source.NextVarBytes()
-	if eof {
-		fmt.Printf("parserValue - deserialize txHash error")
-	}
-	return txHash
-}
+
 func (this *KardiaManager) CheckDeposit() {
 	checkTicker := time.NewTicker(config.KAI_MONITOR_INTERVAL)
 	for {
 		select {
 		case <-checkTicker.C:
 			// try to check deposit
-			this.checkLockDepositEvents()
+			_ = this.checkLockDepositEvents()
 		case <-this.exitChan:
 			return
 		}

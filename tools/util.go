@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -51,7 +50,7 @@ type heightReq struct {
 
 type heightRsp struct {
 	JsonRpc string     `json:"jsonrpc"`
-	Result  string     `json:"result,omitempty"`
+	Result  uint64     `json:"result,omitempty"`
 	Error   *jsonError `json:"error,omitempty"`
 	Id      uint       `json:"id"`
 }
@@ -165,12 +164,7 @@ func GetNodeHeight(url string, restClient *RestClient) (uint64, error) {
 	if rsp.Error != nil {
 		return 0, fmt.Errorf("GetNodeHeight, unmarshal resp err: %s", rsp.Error.Message)
 	}
-	height, err := strconv.ParseUint(rsp.Result, 0, 64)
-	if err != nil {
-		return 0, fmt.Errorf("GetNodeHeight, parse resp height %s failed", rsp.Result)
-	} else {
-		return height, nil
-	}
+	return rsp.Result, nil
 }
 
 func GetProof(url string, contractAddress string, key string, blockheight string, restClient *RestClient) ([]byte, error) {

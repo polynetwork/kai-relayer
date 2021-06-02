@@ -2,17 +2,17 @@
   "PolyConfig":{
     "RestURL":"http://138.91.6.226:40336",
     "EntranceContractAddress":"0300000000000000000000000000000000000000",
-    "WalletFile":"./wallet.dat",
-    "WalletPwd":"123456789"
+    "WalletFile":"/home/thangn/go/pkg/github.com/polynetwork/poly/wallet.dat",
+    "WalletPwd":"123456"
   },
   "KaiConfig":{
-    "SideChainId": 12,
+    "SideChainId": 141,
     "RestURL":"https://dev-1.kardiachain.io",
     "ECCMContractAddress":"0xfD7fa60cc69A1787Cd4255E3a9397464844aeB7B",
     "ECCDContractAddress":"0xf7616021e91Ad107e5149DD1E5E41148B4d25bda",
-    "KeyStorePath": "./keystore",
+    "KeyStorePath": "/home/thangn/snap/geth/477/.ethereum/keystore",
     "KeyStorePwdSet": {
-      "0x2290ddc3874523ffd48c948c8b9379425bDe8BeC": "password"
+      "0x2290ddc3874523ffd48c948c8b9379425bDe8BeC": "123456"
     },
     "BlockConfig": 20,
     "HeadersPerBatch": 500,
