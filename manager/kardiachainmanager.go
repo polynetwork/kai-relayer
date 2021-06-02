@@ -462,6 +462,17 @@ func (this *KardiaManager) handleLockDepositEvents(refHeight uint64) error {
 	return nil
 }
 func (this *KardiaManager) commitProof(height uint32, proof []byte, value []byte, txhash []byte) (string, error) {
+	ctx := context.Background()
+	header, err := this.client.FullHeaderByNumber(ctx, big.NewInt(int64(height)))
+	if err != nil {
+		return "", err
+	}
+
+	headerBytes, err := json.Marshal(header)
+	if err != nil {
+		return "", err
+	}
+
 	log.Infof("commit proof, height: %d, proof: %s, value: %s, txhash: %s", height, string(proof), hex.EncodeToString(value), hex.EncodeToString(txhash))
 	tx, err := this.polySdk.Native.Ccm.ImportOuterTransfer(
 		this.config.KAIConfig.SideChainId,
@@ -469,7 +480,7 @@ func (this *KardiaManager) commitProof(height uint32, proof []byte, value []byte
 		height,
 		proof,
 		ethcommon.Hex2Bytes(this.polySigner.Address.ToHexString()),
-		[]byte{},
+		headerBytes,
 		this.polySigner)
 	if err != nil {
 		return "", err
