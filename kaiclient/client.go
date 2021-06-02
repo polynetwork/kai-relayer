@@ -544,7 +544,7 @@ func toCallArg(msg ethereum.CallMsg) interface{} {
 	}
 	// add default params to avoid kai_kardiaCall crashing
 	if msg.Value != nil {
-		arg["value"] = msg.Value.String()
+		arg["value"] = msg.Value
 	} else {
 		arg["value"] = 0
 	}
