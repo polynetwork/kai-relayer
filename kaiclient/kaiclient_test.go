@@ -21,8 +21,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,23 +36,23 @@ func TestGetFullHeader(t *testing.T) {
 	assert.Equal(t, header.ValidatorSet.Hash().Hex(), header.Header.ValidatorsHash.Hex())
 }
 
-func TestGetTransaction(t *testing.T) {
-	cli, err := Dial(kaiRawRPC)
-	assert.NoError(t, err)
-	ctx := context.Background()
-	tx, isPending, err := cli.TransactionByHash(ctx, common.HexToHash("0xd84e553e62c61f3c3343d7d215c72616907e50bac9235460ba55e878a59d2399"))
-	t.Logf("tx %+v isPending %v err %v", tx, isPending, err)
-	assert.NoError(t, err)
-}
+// func TestGetTransaction(t *testing.T) {
+// 	cli, err := Dial(kaiRawRPC)
+// 	assert.NoError(t, err)
+// 	ctx := context.Background()
+// 	tx, isPending, err := cli.TransactionByHash(ctx, common.HexToHash("0xd84e553e62c61f3c3343d7d215c72616907e50bac9235460ba55e878a59d2399"))
+// 	t.Logf("tx %+v isPending %v err %v", tx, isPending, err)
+// 	assert.NoError(t, err)
+// }
 
-func TestGetTransactionReceipt(t *testing.T) {
-	cli, err := Dial(kaiRawRPC)
-	assert.NoError(t, err)
-	ctx := context.Background()
-	receipt, err := cli.TransactionReceipt(ctx, common.HexToHash("0xd84e553e62c61f3c3343d7d215c72616907e50bac9235460ba55e878a59d2399"))
-	t.Logf("receipt %+v err %v", receipt, err)
-	assert.NoError(t, err)
-}
+// func TestGetTransactionReceipt(t *testing.T) {
+// 	cli, err := Dial(kaiRawRPC)
+// 	assert.NoError(t, err)
+// 	ctx := context.Background()
+// 	receipt, err := cli.TransactionReceipt(ctx, common.HexToHash("0xd84e553e62c61f3c3343d7d215c72616907e50bac9235460ba55e878a59d2399"))
+// 	t.Logf("receipt %+v err %v", receipt, err)
+// 	assert.NoError(t, err)
+// }
 
 // // Verify that Client implements the ethereum interfaces.
 // var (
