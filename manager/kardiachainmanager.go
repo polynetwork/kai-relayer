@@ -27,6 +27,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/polynetwork/eth-contracts/go_abi/eccm_abi"
 	"github.com/polynetwork/kai-relayer/config"
 	"github.com/polynetwork/kai-relayer/db"
@@ -93,7 +94,8 @@ func (this *CrossTransfer) Deserialization(source *common.ZeroCopySource) error 
 type KardiaManager struct {
 	config         *config.ServiceConfig
 	restClient     *tools.RestClient
-	client         *kaiclient.Client
+	client         *ethclient.Client
+	kaiclient      *kaiclient.Client
 	currentHeight  uint64
 	forceHeight    uint64
 	lockerContract *bind.BoundContract
@@ -105,7 +107,7 @@ type KardiaManager struct {
 	db             *db.BoltDB
 }
 
-func NewKardiaManager(servconfig *config.ServiceConfig, startheight uint64, startforceheight uint64, ontsdk *sdk.PolySdk, client *kaiclient.Client, boltDB *db.BoltDB) (*KardiaManager, error) {
+func NewKardiaManager(servconfig *config.ServiceConfig, startheight uint64, startforceheight uint64, ontsdk *sdk.PolySdk, ethclient *ethclient.Client, client *kaiclient.Client, boltDB *db.BoltDB) (*KardiaManager, error) {
 	var wallet *sdk.Wallet
 	var err error
 
@@ -142,7 +144,8 @@ func NewKardiaManager(servconfig *config.ServiceConfig, startheight uint64, star
 		currentHeight: startheight,
 		forceHeight:   startforceheight,
 		restClient:    tools.NewRestClient(),
-		client:        client,
+		client:        ethclient,
+		kaiclient:     client,
 		polySdk:       ontsdk,
 		polySigner:    signer,
 		header4sync:   make([][]byte, 0),
@@ -265,7 +268,7 @@ func (this *KardiaManager) handleNewBlock(height uint64) bool {
 func (this *KardiaManager) handleBlockHeader(height uint64) bool {
 	ctx := context.Background()
 	number := big.NewInt(int64(height))
-	header, err := this.client.HeaderByNumber(ctx, number)
+	header, err := this.kaiclient.HeaderByNumber(ctx, number)
 	if err != nil {
 		log.Error("handleBlockHeader - GetNodeHeader on height :%d failed", height, "err", err)
 		return false
@@ -283,13 +286,13 @@ func (this *KardiaManager) handleBlockHeader(height uint64) bool {
 		return true
 	}
 
-	validators, err := this.client.GetValidators(ctx, number)
+	validators, err := this.kaiclient.GetValidators(ctx, number)
 	if err != nil {
 		log.Error("handleBlockHeader - GetValidators on height :%d failed", height, "err", err)
 		return false
 	}
 
-	commit, err := this.client.GetCommit(ctx, number.Sub(number, big.NewInt(1)))
+	commit, err := this.kaiclient.GetCommit(ctx, number.Sub(number, big.NewInt(1)))
 	if err != nil {
 		log.Error("handleBlockHeader - GetCommit on height :%d failed", height, "err", err)
 		return false
@@ -310,7 +313,7 @@ func (this *KardiaManager) handleBlockHeader(height uint64) bool {
 	return true
 }
 
-func (this *KardiaManager) fetchLockDepositEvents(height uint64, client *kaiclient.Client) bool {
+func (this *KardiaManager) fetchLockDepositEvents(height uint64, client *ethclient.Client) bool {
 	lockAddress := ethcommon.HexToAddress(this.config.KAIConfig.ECCMContractAddress)
 	lockContract, err := eccm_abi.NewEthCrossChainManager(lockAddress, client)
 	if err != nil {
@@ -348,6 +351,7 @@ func (this *KardiaManager) fetchLockDepositEvents(height uint64, client *kaiclie
 			log.Errorf("fetchLockDepositEvents - this.db.PutRetry error: %s", err)
 		}
 		log.Infof("fetchLockDepositEvent -  height: %d", height)
+		fmt.Println("-------------", crossTx)
 	}
 	return true
 }
@@ -463,7 +467,7 @@ func (this *KardiaManager) handleLockDepositEvents(refHeight uint64) error {
 }
 func (this *KardiaManager) commitProof(height uint32, proof []byte, value []byte, txhash []byte) (string, error) {
 	ctx := context.Background()
-	header, err := this.client.FullHeaderByNumber(ctx, big.NewInt(int64(height)))
+	header, err := this.kaiclient.FullHeaderByNumber(ctx, big.NewInt(int64(height)))
 	if err != nil {
 		return "", err
 	}

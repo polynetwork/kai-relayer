@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/polynetwork/kai-relayer/cmd"
 	"github.com/polynetwork/kai-relayer/config"
 	"github.com/polynetwork/kai-relayer/db"
@@ -113,6 +114,11 @@ func startServer(ctx *cli.Context) {
 		return
 	}
 
+	ethclient, err := ethclient.Dial(servConfig.KAIConfig.RestURL)
+	if err != nil {
+		log.Errorf("startServer - cannot dial sync node ethclient, err: %s", err)
+		return
+	}
 	var boltDB *db.BoltDB
 	if servConfig.BoltDbPath == "" {
 		boltDB, err = db.NewBoltDB("boltdb")
@@ -124,8 +130,8 @@ func startServer(ctx *cli.Context) {
 		return
 	}
 
-	initKaiServer(servConfig, polySdk, kclient, boltDB)
-	initPolyServer(servConfig, polySdk, kclient, boltDB)
+	initKaiServer(servConfig, polySdk, ethclient, kclient, boltDB)
+	initPolyServer(servConfig, polySdk, ethclient, kclient, boltDB)
 	waitToExit()
 }
 
@@ -153,8 +159,8 @@ func waitToExit() {
 	<-exit
 }
 
-func initKaiServer(servConfig *config.ServiceConfig, polysdk *sdk.PolySdk, kclient *kaiclient.Client, boltDB *db.BoltDB) {
-	mgr, err := manager.NewKardiaManager(servConfig, StartHeight, StartForceHeight, polysdk, kclient, boltDB)
+func initKaiServer(servConfig *config.ServiceConfig, polysdk *sdk.PolySdk, ethclient *ethclient.Client, kclient *kaiclient.Client, boltDB *db.BoltDB) {
+	mgr, err := manager.NewKardiaManager(servConfig, StartHeight, StartForceHeight, polysdk, ethclient, kclient, boltDB)
 	if err != nil {
 		log.Error("initKAIServer - KAI service start err: %s", err.Error())
 		return
@@ -164,8 +170,8 @@ func initKaiServer(servConfig *config.ServiceConfig, polysdk *sdk.PolySdk, kclie
 	go mgr.CheckDeposit()
 }
 
-func initPolyServer(servConfig *config.ServiceConfig, polysdk *sdk.PolySdk, kclient *kaiclient.Client, boltDB *db.BoltDB) {
-	mgr, err := manager.NewPolyManager(servConfig, uint32(PolyStartHeight), polysdk, kclient, boltDB)
+func initPolyServer(servConfig *config.ServiceConfig, polysdk *sdk.PolySdk, ethclient *ethclient.Client, kclient *kaiclient.Client, boltDB *db.BoltDB) {
+	mgr, err := manager.NewPolyManager(servConfig, uint32(PolyStartHeight), polysdk, ethclient, kclient, boltDB)
 	if err != nil {
 		log.Error("initPolyServer - PolyServer service start failed")
 		return

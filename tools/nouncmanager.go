@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/polynetwork/kai-relayer/kaiclient"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/polynetwork/kai-relayer/log"
 )
 
@@ -32,11 +32,11 @@ const clear_nonce_interval = 10 * time.Minute
 type NonceManager struct {
 	addressNonce  map[common.Address]uint64
 	returnedNonce map[common.Address]SortedNonceArr
-	kaiCli        *kaiclient.Client
+	kaiCli        *ethclient.Client
 	lock          sync.Mutex
 }
 
-func NewNonceManager(kaiCli *kaiclient.Client) *NonceManager {
+func NewNonceManager(kaiCli *ethclient.Client) *NonceManager {
 	nonceManager := &NonceManager{
 		addressNonce:  make(map[common.Address]uint64),
 		kaiCli:        kaiCli,

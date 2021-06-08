@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ontio/ontology-crypto/keypair"
 	"github.com/ontio/ontology-crypto/signature"
 	"github.com/polynetwork/eth-contracts/go_abi/eccd_abi"
@@ -63,11 +64,11 @@ type PolyManager struct {
 	contractAbi   *abi.ABI
 	exitChan      chan int
 	db            *db.BoltDB
-	ethClient     *kaiclient.Client
+	ethClient     *ethclient.Client
 	senders       []*EthSender
 }
 
-func NewPolyManager(servCfg *config.ServiceConfig, startblockHeight uint32, polySdk *sdk.PolySdk, ethereumsdk *kaiclient.Client, boltDB *db.BoltDB) (*PolyManager, error) {
+func NewPolyManager(servCfg *config.ServiceConfig, startblockHeight uint32, polySdk *sdk.PolySdk, ethclient *ethclient.Client, kaiclient *kaiclient.Client, boltDB *db.BoltDB) (*PolyManager, error) {
 	contractabi, err := abi.JSON(strings.NewReader(eccm_abi.EthCrossChainManagerABI))
 	if err != nil {
 		return nil, err
@@ -108,13 +109,13 @@ func NewPolyManager(servCfg *config.ServiceConfig, startblockHeight uint32, poly
 			panic(err)
 		}
 
-		v.ethClient = ethereumsdk
+		v.ethClient = ethclient
 		v.keyStore = ks
 		v.pwd = pwd
 		v.config = servCfg
 		v.polySdk = polySdk
 		v.contractAbi = &contractabi
-		v.nonceManager = tools.NewNonceManager(ethereumsdk)
+		v.nonceManager = tools.NewNonceManager(ethclient)
 		v.cmap = make(map[string]chan *EthTxInfo)
 
 		senders[i] = v
@@ -126,7 +127,7 @@ func NewPolyManager(servCfg *config.ServiceConfig, startblockHeight uint32, poly
 		currentHeight: startblockHeight,
 		contractAbi:   &contractabi,
 		db:            boltDB,
-		ethClient:     ethereumsdk,
+		ethClient:     ethclient,
 		senders:       senders,
 	}, nil
 }
@@ -295,7 +296,7 @@ type EthSender struct {
 	keyStore     *tools.KaiKeyStore
 	cmap         map[string]chan *EthTxInfo
 	nonceManager *tools.NonceManager
-	ethClient    *kaiclient.Client
+	ethClient    *ethclient.Client
 	polySdk      *sdk.PolySdk
 	config       *config.ServiceConfig
 	contractAbi  *abi.ABI
