@@ -137,8 +137,7 @@ func GetNodeHeader(url string, restClient *RestClient, height uint64) ([]byte, e
 	if rsp.Error != nil {
 		return nil, fmt.Errorf("GetNodeHeight, unmarshal resp err: %s", rsp.Error.Message)
 	}
-	block, err := json.Marshal(rsp.Result)
-	return block, nil
+	return json.Marshal(rsp.Result)
 }
 
 func GetNodeHeight(url string, restClient *RestClient) (uint64, error) {
@@ -170,13 +169,13 @@ func GetNodeHeight(url string, restClient *RestClient) (uint64, error) {
 func GetProof(url string, contractAddress string, key string, blockheight string, restClient *RestClient) ([]byte, error) {
 	req := &proofReq{
 		JsonRPC: "2.0",
-		Method:  "kai_getProof",
+		Method:  "eth_getProof",
 		Params:  []interface{}{contractAddress, []string{key}, blockheight},
 		Id:      1,
 	}
 	reqdata, err := json.Marshal(req)
 	if err != nil {
-		return nil, fmt.Errorf("get_kaiProof: marshal req err: %s", err)
+		return nil, fmt.Errorf("eth_kaiProof: marshal req err: %s", err)
 	}
 	rspdata, err := restClient.SendRestRequest(url, reqdata)
 	if err != nil {

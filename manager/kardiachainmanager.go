@@ -196,24 +196,27 @@ func (this *KardiaManager) MonitorChain() {
 			if !blockHandleResult {
 				continue
 			}
-			// try to commit lastest header when we are at latest height
-			commitHeaderResult := this.commitHeader()
-			if commitHeaderResult > 0 {
-				log.Error("MonitorChain - commit header failed.", "height", this.currentHeight)
-				continue
-			} else if commitHeaderResult == 0 {
-				backtrace = 1
-				this.header4sync = make([][]byte, 0)
-				continue
-			} else {
-				latestHeight := this.findLastestHeight()
-				if latestHeight == 0 {
+
+			if len(this.header4sync) > 0 {
+				// try to commit lastest header when we are at latest height
+				commitHeaderResult := this.commitHeader()
+				if commitHeaderResult > 0 {
+					log.Error("MonitorChain - commit header failed.", "height", this.currentHeight)
 					continue
+				} else if commitHeaderResult == 0 {
+					backtrace = 1
+					this.header4sync = make([][]byte, 0)
+					continue
+				} else {
+					latestHeight := this.findLastestHeight()
+					if latestHeight == 0 {
+						continue
+					}
+					this.currentHeight = latestHeight - backtrace
+					backtrace++
+					log.Errorf("MonitorChain - back to height: %d", this.currentHeight)
+					this.header4sync = make([][]byte, 0)
 				}
-				this.currentHeight = latestHeight - backtrace
-				backtrace++
-				log.Errorf("MonitorChain - back to height: %d", this.currentHeight)
-				this.header4sync = make([][]byte, 0)
 			}
 		case <-this.exitChan:
 			return
@@ -232,6 +235,7 @@ func (this *KardiaManager) init() error {
 	} else {
 		this.currentHeight = latestHeight
 	}
+	// this.currentHeight = 760565
 	return nil
 }
 
@@ -308,7 +312,6 @@ func (this *KardiaManager) handleBlockHeader(height uint64) bool {
 		log.Errorf("marshal header on height :%d failed err %s", height, err)
 		return false
 	}
-
 	this.header4sync = append(this.header4sync, headerBytes)
 	return true
 }
@@ -351,7 +354,6 @@ func (this *KardiaManager) fetchLockDepositEvents(height uint64, client *ethclie
 			log.Errorf("fetchLockDepositEvents - this.db.PutRetry error: %s", err)
 		}
 		log.Infof("fetchLockDepositEvent -  height: %d", height)
-		fmt.Println("-------------", crossTx)
 	}
 	return true
 }
@@ -389,28 +391,20 @@ func (this *KardiaManager) MonitorDeposit() {
 	for {
 		select {
 		case <-monitorTicker.C:
-			height, err := tools.GetNodeHeight(this.config.KAIConfig.RestURL, this.restClient)
-			if err != nil {
-				log.Infof("MonitorChain - cannot get node height, err: %s", err)
-				continue
-			}
-			snycheight := this.findLastestHeight()
-			if snycheight > height-config.KAI_PROOF_USERFUL_BLOCK {
-				// try to handle deposit event when we are at latest height
-				if err := this.handleLockDepositEvents(snycheight); err != nil {
-					log.Errorf("MonitorChain - handleLockDepositEvents, err: %s", err)
-				}
+			if err := this.handleLockDepositEvents(); err != nil {
+				log.Errorf("MonitorChain - handleLockDepositEvents, err: %s", err)
 			}
 		case <-this.exitChan:
 			return
 		}
 	}
 }
-func (this *KardiaManager) handleLockDepositEvents(refHeight uint64) error {
+func (this *KardiaManager) handleLockDepositEvents() error {
 	retryList, err := this.db.GetAllRetry()
 	if err != nil {
 		return fmt.Errorf("handleLockDepositEvents - this.db.GetAllRetry error: %s", err)
 	}
+	fmt.Println("----------------->", len(retryList))
 	for _, v := range retryList {
 		time.Sleep(time.Second * 1)
 		crosstx := new(CrossTransfer)
@@ -426,11 +420,8 @@ func (this *KardiaManager) handleLockDepositEvents(refHeight uint64) error {
 			log.Errorf("handleLockDepositEvents - MappingKeyAt error:%s\n", err.Error())
 			continue
 		}
-		if refHeight <= crosstx.height+this.config.KAIConfig.BlockConfig {
-			continue
-		}
-		height := int64(refHeight - this.config.KAIConfig.BlockConfig)
-		heightHex := hexutil.EncodeBig(big.NewInt(height))
+
+		heightHex := hexutil.EncodeBig(big.NewInt(int64(crosstx.height + 1)))
 		proofKey := hexutil.Encode(keyBytes)
 		//2. get proof
 		proof, err := tools.GetProof(this.config.KAIConfig.RestURL, this.config.KAIConfig.ECCDContractAddress, proofKey, heightHex, this.restClient)
@@ -439,7 +430,7 @@ func (this *KardiaManager) handleLockDepositEvents(refHeight uint64) error {
 			continue
 		}
 		//3. commit proof to poly
-		txHash, err := this.commitProof(uint32(height+1), proof, crosstx.value, crosstx.txId)
+		txHash, err := this.commitProof(uint32(crosstx.height+1), proof, crosstx.value, crosstx.txId)
 		if err != nil {
 			if strings.Contains(err.Error(), "chooseUtxos, current utxo is not enough") {
 				log.Infof("handleLockDepositEvents - invokeNativeContract error: %s", err)
